@@ -162,7 +162,9 @@ def imgs_preparing(source_path, imgs_path, masks_path, img_type_list, img_size=1
             img = cv.erode(img, kernel, iterations=1)
 
             # делаем трешхолд
-            ret, img = cv.threshold(img, 127, 255, cv.THRESH_BINARY)
+            # ret, img = cv.threshold(img, 127, 255, cv.THRESH_BINARY)
+            img[:, :] = np.where(img >= 127, 255, 0)
+
 
         # делаем ресайз
         img = cv.resize(img, (new_width, new_height), interpolation=cv.INTER_AREA)
