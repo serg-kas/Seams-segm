@@ -163,7 +163,9 @@ def imgs_preparing(source_path, imgs_path, masks_path, img_type_list, img_size=1
             img = cv.erode(img, kernel, iterations=1)
 
             # делаем трешхолд
-            img = np.where(img > 200, 255, 0)
+            # img = np.where(img > 200, 255, 0)
+            img[img < 200] = 0
+            img[img >= 200] = 255
 
         try:
             cv.imwrite(out_file, img)
