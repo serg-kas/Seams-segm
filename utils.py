@@ -148,13 +148,16 @@ def imgs_preparing(source_path, imgs_path, masks_path, img_type_list, img_size=1
         new_width = int(width * scale_img)
         new_height = int(height * scale_img)
 
+        # делаем ресайз
+        img = cv.resize(img, (new_width, new_height), interpolation=cv.INTER_AREA)
+
         # делаем автокоррекцию контраста
         # img = autocontrast(img)
 
         # Обрабатываем маску
         if 'mask' in file.lower():
             # переводим в ч/б
-            img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+            img = cv.cvtColor(img.copy(), cv.COLOR_BGR2GRAY)
 
             # убираем шум
             kernel = np.ones((3, 3), np.uint8)
@@ -164,10 +167,6 @@ def imgs_preparing(source_path, imgs_path, masks_path, img_type_list, img_size=1
             # делаем трешхолд
             # ret, img = cv.threshold(img, 127, 255, cv.THRESH_BINARY)
             img[:, :] = np.where(img >= 127, 255, 0)
-
-
-        # делаем ресайз
-        img = cv.resize(img, (new_width, new_height), interpolation=cv.INTER_AREA)
 
         try:
             cv.imwrite(out_file, img)
