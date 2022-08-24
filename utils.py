@@ -153,14 +153,16 @@ def imgs_preparing(source_path, imgs_path, masks_path, img_type_list, img_size=1
 
         # Обрабатываем маску
         if 'mask' in file.lower():
-            # переводим в ч/б и делаем тресхолд
+            # переводим в ч/б
             img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-            ret, img = cv.threshold(img, 180, 255, cv.THRESH_BINARY)
 
             # убираем шум
             kernel = np.ones((3, 3), np.uint8)
             img = cv.dilate(img, kernel, iterations=1)
             img = cv.erode(img, kernel, iterations=1)
+
+            # делаем трешхолд
+            ret, img = cv.threshold(img, 180, 255, cv.THRESH_BINARY)
 
         # делаем ресайз
         img = cv.resize(img, (new_width, new_height), interpolation=cv.INTER_AREA)
