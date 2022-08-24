@@ -116,13 +116,15 @@ def imgs_preparing(source_path, imgs_path, masks_path, img_type_list, img_size=1
         # файлы переименуем по цифровым комбинациям в их именах
         filename, file_extension = os.path.splitext(file)
         filename = re.findall(r'\d+', filename)[0]
+        #
         if 'mask' in file.lower():
             out_file = os.path.join(masks_path, filename+file_extension)
+            # Загружаем изображение
+            img = cv.imread(in_file, 0)
         else:
             out_file = os.path.join(imgs_path, filename+file_extension)
-
-        # Загружаем изображение
-        img = cv.imread(in_file)
+            # Загружаем изображение
+            img = cv.imread(in_file)
 
         # Размеры картинки
         height = img.shape[0]
@@ -150,13 +152,10 @@ def imgs_preparing(source_path, imgs_path, masks_path, img_type_list, img_size=1
         # делаем ресайз
         img = cv.resize(img, (new_width, new_height), interpolation=cv.INTER_AREA)
 
-        # делаем автокоррекцию контраста
-        # img = autocontrast(img)
-
         # Обрабатываем маску
         if 'mask' in file.lower():
             # переводим в ч/б
-            img = cv.cvtColor(img.copy(), cv.COLOR_BGR2GRAY)
+            # img = cv.cvtColor(img.copy(), cv.COLOR_BGR2GRAY)
 
             # морфология
             kernel = np.ones((3, 3), np.uint8)
