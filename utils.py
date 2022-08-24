@@ -1,11 +1,9 @@
 # Модуль функций
 import numpy as np
 import cv2 as cv
-import random
-import math
 import os
-import sys
 import time
+import re
 
 
 # Функция автокоррекции контраста
@@ -84,38 +82,47 @@ def file_check(file_name, file_extension, img_type_list):
 
 
 # Функция подготовки изображений
-def imgs_preparing(source_path, out_path, img_type_list, img_size=1024, crop=0.0, verbose=False):
+def imgs_preparing(source_path, imgs_path, masks_path, img_type_list, img_size=1024, crop=0.0, verbose=False):
 
     if verbose:
         time_start = time.time()
 
-    # Создадим папку для файлов, если её нет
-    if not (out_path in os.listdir('.')):
-        os.mkdir(out_path)
+    # Создадим папки для файлов, если их нет
+    if not (imgs_path in os.listdir('.')):
+        os.mkdir(imgs_path)
+    if not (masks_path in os.listdir('.')):
+        os.mkdir(masks_path)
 
-    # Создадим список файлов картинок для обработки
+    # Создадим список файлов для обработки
     source_files = sorted(os.listdir(source_path))
-    img_files = []
-    mask_count = 0 # Попутно посчитаем сколько у нас файлов с масками
+    files_list = []
+    mask_count = 0  # попутно посчитаем сколько у нас файлов с масками
     for f in source_files:
         filename, file_extension = os.path.splitext(f)
-        # Проверяем отдельной функцией брать ли файл в датасет
+        # Проверяем отдельной функцией брать или нет файл в датасет
         if file_check(filename, file_extension, img_type_list):
-            img_files.append(f)
+            files_list.append(f)
             if 'mask' in filename.lower():
                 mask_count += 1
 
     if verbose:
         print('Найдено файлов с масками: {}'.format(mask_count))
-        print('Всего к обработке файлов: {}'.format(len(img_files)))
+        print('Всего к обработке файлов: {}'.format(len(files_list)))
 
     # Обрабатываем
-    for file in img_files:
+    for file in files_list:
         # полные пути к файлам
-        img_file = os.path.join(source_path, file)
-        out_file = os.path.join(out_path, file)
+        in_file = os.path.join(source_path, file)
+        # файлы переименуем по цифровым комбинациям в их именах
+        filename, file_extension = os.path.splitext(file)
+        filename = re.findall(r'\d+', filename)[0]
+        if 'mask' in file.lower():
+            out_file = os.path.join(masks_path, filename+file_extension)
+        else:
+            out_file = os.path.join(imgs_path, filename+file_extension)
+
         # Загружаем изображение
-        img = cv.imread(img_file)
+        img = cv.imread(in_file)
 
         # Размеры картинки
         height = img.shape[0]
@@ -144,12 +151,19 @@ def imgs_preparing(source_path, out_path, img_type_list, img_size=1024, crop=0.0
         # делаем автокоррекцию контраста
         # img = autocontrast(img)
 
+        # Обрабатываем маску
+        if 'mask' in file.lower():
+            # переводим в ч/б и делаем тресхолд
+            img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+            ret, img = cv.threshold(img, 180, 255, cv.THRESH_BINARY)
+
+            # убираем шум
+            kernel = np.ones((3, 3), np.uint8)
+            img = cv.dilate(img, kernel, iterations=1)
+            img = cv.erode(img, kernel, iterations=1)
+
         # делаем ресайз
         img = cv.resize(img, (new_width, new_height), interpolation=cv.INTER_AREA)
-
-        # cv.imshow('image', img)
-        # cv.waitKey(0)
-        # cv.destroyAllWindows()
 
         try:
             cv.imwrite(out_file, img)
