@@ -11,6 +11,9 @@ from tensorflow.keras.optimizers import Adam, RMSprop, SGD
 from tensorflow.keras import backend as K
 #
 import albumentations as A
+#
+img_height = 512
+img_width = 512
 
 
 # Функция - генератор данных
