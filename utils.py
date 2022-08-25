@@ -135,7 +135,7 @@ def imgs_preparing(source_path, imgs_path, masks_path, img_type_list, img_size=1
             assert crop < 1
             crop_h =int(crop * height)
             crop_w = int(crop * width)
-            img = img[crop_h:height-crop_h, crop_w:width-crop_w]
+            img = img[crop_h:height-crop_h, crop_w:width-crop_w].copy()
             # Новый размеры картинки
             height = img.shape[0]
             width = img.shape[1]
@@ -163,9 +163,9 @@ def imgs_preparing(source_path, imgs_path, masks_path, img_type_list, img_size=1
             img = cv.erode(img, kernel, iterations=1)
 
             # делаем трешхолд
-            # img = np.where(img > 200, 255, 0)
-            img[img < 200] = 0
-            img[img >= 200] = 255
+            img = np.where(img > 200, 255, 0)
+            # img[img < 200] = 0
+            # img[img >= 200] = 255
 
         try:
             cv.imwrite(out_file, img)
