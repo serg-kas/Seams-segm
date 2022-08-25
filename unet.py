@@ -1,6 +1,7 @@
 # Модуль для работы с архитектурой Unet
 import numpy as np
 import cv2 as cv
+import random
 #
 import utils as u
 #
@@ -253,7 +254,7 @@ def pred_images(model, images_list):
         if mask_list is not None:
             mask_list.append(mask)
 
-    if mask_list == None:
+    if mask_list is None:
         return mask
     else:
         return mask_list
