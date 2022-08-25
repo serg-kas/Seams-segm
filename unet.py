@@ -12,67 +12,6 @@ from tensorflow.keras.optimizers import Adam, RMSprop, SGD
 from tensorflow.keras import backend as K
 #
 import albumentations as A
-#
-img_height = 512
-img_width = 512
-
-
-# Функция - генератор данных
-def generate_data(batchsize):
-    # Объявляем аугментацию
-    transform = A.Compose([
-        A.Resize(height=img_height, width=img_width),
-        A.HorizontalFlip(p=0.5),
-        A.OneOf([
-            A.RandomCrop(int(img_height * 0.5), int(img_width * 0.5), p=1),
-            A.RandomCrop(int(img_height * 0.75), int(img_width * 0.75), p=1),
-            A.RandomCrop(int(img_height * 0.9), int(img_width * 0.9), p=1),
-        ], p=0.9),
-        A.Resize(height=img_height, width=img_width),
-        A.RandomBrightnessContrast(p=0.5),
-        A.HueSaturationValue(p=0.5),
-        A.OneOf([
-            A.MotionBlur(blur_limit=15, p=1),
-            A.Blur(blur_limit=15, p=1),
-        ], p=0.2),
-    ])
-
-    x_data = []
-    y_data = []
-    batchcount = 0
-    while True:
-        # Берем картинку
-        file_name = random.choice(img_names)
-        curr_image = cv.imread(file_name)
-
-        # Делаем коррекцию контраста
-        curr_image = u.autocontrast(curr_image)
-
-        # Переходим к RGB
-        curr_image = cv.cvtColor(curr_image, cv.COLOR_BGR2RGB)
-
-        # Берем аннотацию
-        curr_ann = cv.imread(os.path.join(anns_path, os.path.basename(file_name)), 0)
-
-        # делаем аугментацию
-        transformed = transform(image=curr_image, mask=curr_ann)
-        transformed_image = transformed['image']
-        transformed_ann = transformed['mask']
-
-        # переходим к диапазону 0 до 1 и отправляем картинку в список
-        x_data.append(transformed_image / 255.)
-
-        # классы аннотации переводим ohe и отправляем в список
-        y_data.append(u.mask_to_ohe(transformed_ann))
-
-        batchcount += 1
-        if batchcount >= batchsize:
-            X = np.array(x_data, dtype='float32')
-            y = np.array(y_data, dtype='float32')
-            yield (X, y)
-            x_data = []
-            y_data = []
-            batchcount = 0
 
 
 # Функция метрики, обрабатывающая пересечение двух областей
