@@ -99,7 +99,7 @@ def imgs_preparing(source_path, imgs_path, masks_path, img_type_list, img_size=1
     mask_count = 0  # попутно посчитаем сколько у нас файлов с масками
     for f in source_files:
         filename, file_extension = os.path.splitext(f)
-        # Проверяем отдельной функцией брать или нет файл в датасет
+        # Проверяем отдельной функцией брать или не брать файл в датасет
         if file_check(filename, file_extension, img_type_list):
             files_list.append(f)
             if 'mask' in filename.lower():
@@ -118,11 +118,13 @@ def imgs_preparing(source_path, imgs_path, masks_path, img_type_list, img_size=1
         filename = re.findall(r'\d+', filename)[0]
         #
         if 'mask' in file.lower():
-            out_file = os.path.join(masks_path, filename+file_extension)
+            # out_file = os.path.join(masks_path, filename+file_extension)
+            out_file = os.path.join(masks_path, filename + '.png')
             # Загружаем изображение
             img = cv.imread(in_file, 0)
         else:
-            out_file = os.path.join(imgs_path, filename+file_extension)
+            # out_file = os.path.join(imgs_path, filename+file_extension)
+            out_file = os.path.join(imgs_path, filename + '.png')
             # Загружаем изображение
             img = cv.imread(in_file)
 
@@ -135,8 +137,8 @@ def imgs_preparing(source_path, imgs_path, masks_path, img_type_list, img_size=1
             assert crop < 1
             crop_h =int(crop * height)
             crop_w = int(crop * width)
-            img = img[crop_h:height-crop_h, crop_w:width-crop_w].copy()
-            # Новый размеры картинки
+            img = img[crop_h:height-crop_h, crop_w:width-crop_w]
+            # Новые размеры картинки
             height = img.shape[0]
             width = img.shape[1]
             # print('Размер картинки ПОСЛЕ кропа {}'.format(img.shape))
@@ -147,10 +149,10 @@ def imgs_preparing(source_path, imgs_path, masks_path, img_type_list, img_size=1
         else:
             scale_img = img_size / height
         # и целевые размеры изображения
-        new_width = int(width * scale_img)
-        new_height = int(height * scale_img)
+        target_width = int(width * scale_img)
+        target_height = int(height * scale_img)
         # делаем ресайз
-        img = cv.resize(img, (new_width, new_height), interpolation=cv.INTER_AREA)
+        img = cv.resize(img, (target_width, target_height), interpolation=cv.INTER_AREA)
 
         # Обрабатываем маску
         if 'mask' in file.lower():
@@ -164,11 +166,10 @@ def imgs_preparing(source_path, imgs_path, masks_path, img_type_list, img_size=1
 
             # делаем трешхолд
             img = np.where(img > 200, 255, 0)
-            # img[img < 200] = 0
-            # img[img >= 200] = 255
 
         try:
             cv.imwrite(out_file, img)
+
         except IOError:
             print('Не удалось сохранить файл: {}'.format(out_file))
         finally:
