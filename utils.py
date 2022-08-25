@@ -6,25 +6,6 @@ import time
 import re
 
 
-# Функция автокоррекции контраста
-def autocontrast(img):
-    # converting to LAB color space
-    lab = cv.cvtColor(img, cv.COLOR_BGR2LAB)
-    l_channel, a, b = cv.split(lab)
-
-    # Applying CLAHE to L-channel
-    # feel free to try different values for the limit and grid size:
-    clahe = cv.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    cl = clahe.apply(l_channel)
-
-    # merge the CLAHE enhanced L-channel with the a and b channel
-    limg = cv.merge((cl, a, b))
-
-    # Converting image from LAB Color model to BGR color spcae
-    result = cv.cvtColor(limg, cv.COLOR_LAB2BGR)
-    return result
-
-
 # Функция проверки нужен ли этот файл для обработки
 # (специфически для данного датасета)
 def file_check(file_name, file_extension, img_type_list):
@@ -181,8 +162,49 @@ def imgs_preparing(source_path, imgs_path, masks_path, img_type_list, img_size=1
         print('Время обработки, сек: {0:.1f}'.format(time_end))
 
 
+# Функция автокоррекции контраста
+def autocontrast(img):
+    # converting to LAB color space
+    lab = cv.cvtColor(img, cv.COLOR_BGR2LAB)
+    l_channel, a, b = cv.split(lab)
+
+    # Applying CLAHE to L-channel
+    # feel free to try different values for the limit and grid size:
+    clahe = cv.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    cl = clahe.apply(l_channel)
+
+    # merge the CLAHE enhanced L-channel with the a and b channel
+    limg = cv.merge((cl, a, b))
+
+    # Converting image from LAB Color model to BGR color spcae
+    result = cv.cvtColor(limg, cv.COLOR_LAB2BGR)
+    return result
 
 
+# Функция преобразования аннотации в one hot encoding
+def mask_to_ohe(ann_image, classes=[0, 255]):
+    ones = np.ones((ann_image.shape[0], ann_image.shape[1], len(classes)), dtype=np.uint8)
+    zeros = np.zeros((ann_image.shape[0], ann_image.shape[1], len(classes)), dtype=np.uint8)
+
+    result = zeros.copy()
+
+    result[:, :, 0] = np.where(ann_image == 0, ones[:, :, 0], zeros[:, :, 0])
+    result[:, :, 1] = np.where(ann_image == 255, ones[:, :, 1], zeros[:, :, 1])
+
+    return result
+
+
+# Функция преобразования аннотации из ohe в классы
+def ohe_to_mask(ann_ohe, classes=[0, 255]):
+    ones = np.ones((ann_ohe.shape[0], ann_ohe.shape[1]), dtype=np.uint8)
+    zeros = np.zeros((ann_ohe.shape[0], ann_ohe.shape[1]), dtype=np.uint8)
+
+    result = zeros.copy()
+
+    result = np.where(ann_ohe[:, :, 0] == 1, ones * 0, result)
+    result = np.where(ann_ohe[:, :, 1] == 1, ones * 255, result)
+
+    return result
 
 
 
