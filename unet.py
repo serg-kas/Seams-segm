@@ -144,7 +144,7 @@ def unet(num_classes=2, input_shape=(1024, 1024, 3)):
 
 
 # Функция предикта
-def pred_images(model, images_list):
+def pred_images(model, images_list, img_height, img_width):
     """
     :param model: путь к  модели для загрузки
     :param images_list: список изображений для обрабоки (можно подать и одиночную картинку)
