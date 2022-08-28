@@ -141,9 +141,9 @@ def imgs_preparing(source_path, imgs_path, masks_path, img_type_list, img_size=1
             # img = cv.cvtColor(img.copy(), cv.COLOR_BGR2GRAY)
 
             # морфология
-            kernel = np.ones((3, 3), np.uint8)
+            # kernel = np.ones((3, 3), np.uint8)
             # img = cv.dilate(img, kernel, iterations=1)
-            img = cv.erode(img, kernel, iterations=1)
+            # img = cv.erode(img, kernel, iterations=1)  # делалось для Unet-1
 
             # делаем трешхолд
             img = np.where(img > 200, 255, 0)
