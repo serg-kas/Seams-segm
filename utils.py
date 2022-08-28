@@ -162,6 +162,106 @@ def imgs_preparing(source_path, imgs_path, masks_path, img_type_list, img_size=1
         print('Время обработки, сек: {0:.1f}'.format(time_end))
 
 
+# Функция подготовки изображений
+def imgs_preparing_fs(source_path, imgs_path, masks_path, img_type_list, crop=0.0, verbose=False):
+
+    if verbose:
+        time_start = time.time()
+
+    # Создадим папки для файлов, если их нет
+    if not (imgs_path in os.listdir('.')):
+        os.mkdir(imgs_path)
+    if not (masks_path in os.listdir('.')):
+        os.mkdir(masks_path)
+
+    # Создадим список файлов для обработки
+    source_files = sorted(os.listdir(source_path))
+    files_list = []
+    mask_count = 0  # попутно посчитаем сколько у нас файлов с масками
+    for f in source_files:
+        filename, file_extension = os.path.splitext(f)
+        # Проверяем отдельной функцией брать или не брать файл в датасет
+        if file_check(filename, file_extension, img_type_list):
+            files_list.append(f)
+            if 'mask' in filename.lower():
+                mask_count += 1
+
+    if verbose:
+        print('Найдено файлов с масками: {}'.format(mask_count))
+        print('Всего к обработке файлов: {}'.format(len(files_list)))
+
+    # Обрабатываем
+    for file in files_list:
+        # полные пути к файлам
+        in_file = os.path.join(source_path, file)
+        # файлы переименуем по цифровым комбинациям в их именах
+        filename, file_extension = os.path.splitext(file)
+        filename = re.findall(r'\d+', filename)[0]
+        #
+        if 'mask' in file.lower():
+            # out_file = os.path.join(masks_path, filename+file_extension)
+            out_file = os.path.join(masks_path, filename + '.png')
+            # Загружаем изображение
+            img = cv.imread(in_file, 0)
+        else:
+            # out_file = os.path.join(imgs_path, filename+file_extension)
+            out_file = os.path.join(imgs_path, filename + '.png')
+            # Загружаем изображение
+            img = cv.imread(in_file)
+
+        # Размеры картинки
+        height = img.shape[0]
+        width = img.shape[1]
+
+        # Обрезаем картинку по краям
+        if crop > 0:
+            assert crop < 1
+            crop_h =int(crop * height)
+            crop_w = int(crop * width)
+            img = img[crop_h:height-crop_h, crop_w:width-crop_w]
+            # Новые размеры картинки
+            height = img.shape[0]
+            width = img.shape[1]
+            # print('Размер картинки ПОСЛЕ кропа {}'.format(img.shape))
+
+        # Рассчитаем коэффициент для изменения размера
+        # if width > height:
+        #     scale_img = img_size / width
+        # else:
+        #     scale_img = img_size / height
+        # и целевые размеры изображения
+        # target_width = int(width * scale_img)
+        # target_height = int(height * scale_img)
+        # делаем ресайз
+        # img = cv.resize(img, (target_width, target_height), interpolation=cv.INTER_AREA)
+
+        # Обрабатываем маску
+        if 'mask' in file.lower():
+            # переводим в ч/б
+            # img = cv.cvtColor(img.copy(), cv.COLOR_BGR2GRAY)
+
+            # морфология
+            # kernel = np.ones((3, 3), np.uint8)
+            # img = cv.dilate(img, kernel, iterations=1)
+            # img = cv.erode(img, kernel, iterations=1)  # делалось для Unet-1
+
+            # делаем трешхолд
+            img = np.where(img > 200, 255, 0)
+
+        try:
+            cv.imwrite(out_file, img)
+
+        except IOError:
+            print('Не удалось сохранить файл: {}'.format(out_file))
+        finally:
+            if verbose:
+                print('Обработали файл: {}'.format(out_file))
+
+    if verbose:
+        time_end = time.time() - time_start
+        print('Время обработки, сек: {0:.1f}'.format(time_end))
+
+
 # Функция автокоррекции контраста
 def autocontrast(img):
     # converting to LAB color space
