@@ -15,10 +15,10 @@ IMG_SIZE = 1024
 CROP = 0.1
 
 if __name__ == '__main__':
-    # Перезаписываем картинки с ресайзом и кропом в папку для готовых файлов
+    # Перезаписываем картинки с ресайзом и кропом в папки для готовых файлов
     # u.imgs_preparing(imgs_orig_path, imgs_path, masks_path, img_type_list, IMG_SIZE, CROP, VERBOSE)
 
-    # Вариант для работы с полным разрешением исходных изображений
+    # Перезаписываем картинки БЕЗ ресайза, с кропом в папки для готовых файлов
     u.imgs_preparing_fs(imgs_orig_path, imgs_path+'_fs', masks_path+'_fs', img_type_list, CROP, VERBOSE)
 
 

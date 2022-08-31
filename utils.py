@@ -162,7 +162,7 @@ def imgs_preparing(source_path, imgs_path, masks_path, img_type_list, img_size=1
         print('Время обработки, сек: {0:.1f}'.format(time_end))
 
 
-# Функция подготовки изображений
+# Функция подготовки изображений в оригинальных размерах
 def imgs_preparing_fs(source_path, imgs_path, masks_path, img_type_list, crop=0.0, verbose=False):
 
     if verbose:
@@ -223,17 +223,6 @@ def imgs_preparing_fs(source_path, imgs_path, masks_path, img_type_list, crop=0.
             height = img.shape[0]
             width = img.shape[1]
             # print('Размер картинки ПОСЛЕ кропа {}'.format(img.shape))
-
-        # Рассчитаем коэффициент для изменения размера
-        # if width > height:
-        #     scale_img = img_size / width
-        # else:
-        #     scale_img = img_size / height
-        # и целевые размеры изображения
-        # target_width = int(width * scale_img)
-        # target_height = int(height * scale_img)
-        # делаем ресайз
-        # img = cv.resize(img, (target_width, target_height), interpolation=cv.INTER_AREA)
 
         # Обрабатываем маску
         if 'mask' in file.lower():
