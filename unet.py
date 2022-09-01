@@ -1,7 +1,8 @@
 # Модуль для работы с архитектурой Unet
 import numpy as np
 import cv2 as cv
-import random
+import os
+import time
 #
 import utils as u
 #
@@ -10,8 +11,11 @@ from tensorflow.keras.layers import Dense, Conv2D, MaxPooling2D, Flatten, Dropou
 from tensorflow.keras.layers import Input, Conv2DTranspose, concatenate, Activation, MaxPooling2D, Conv2D
 from tensorflow.keras.optimizers import Adam, RMSprop, SGD
 from tensorflow.keras import backend as K
+from tensorflow.keras.models import load_model
 #
-import albumentations as A
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'  # закомментировать для использования GPU
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'   # уровень 2 - только сообщения об ошибках
+import tensorflow as tf
 
 
 # Функция метрики, обрабатывающая пересечение двух областей
@@ -198,3 +202,22 @@ def pred_images(model, images_list, img_height, img_width):
     else:
         return mask_list
 
+
+# Функция получения модели
+def get_model(model_path):
+    """
+    :param model_path: путь к  модели для загрузки
+    :return: model: загруженная модель
+    """
+
+    gpu_present = bool(len(tf.config.list_physical_devices('GPU')))
+    if gpu_present:
+        print('GPU found')
+    else:
+        print('No GPU found')
+
+    time_start = time.time()
+    model = load_model(model_path, custom_objects={'dice_coef': dice_coef})
+    time_end = time.time() - time_start
+    print('Время загрузки модели: {0:.1f}'.format(time_end))
+    return model
