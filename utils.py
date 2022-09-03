@@ -4,6 +4,7 @@ import cv2 as cv
 import os
 import time
 import re
+import tkinter as tk  # используем чтобы узнать разрешение экрана
 
 
 # Функция проверки нужен ли этот файл для обработки
@@ -318,6 +319,61 @@ def img_resize_cv(image, img_size=1024):
     return image
 
 
+# Функция визуализации
+def show_results(results, titles, N_cols=3, N_rows=2):
+
+    # Определим разрешение экрана
+    def get_screen_resolution():
+        root = tk.Tk()
+        W = root.winfo_screenwidth()
+        H = root.winfo_screenheight()
+        print('Screen resolution: ({},{})'.format(W, H))
+        if W < 1024 or H < 768:
+            W = 1200
+            H = 800
+        return W, H
+
+    # Get optimal font scale
+    def get_optimal_font_scale(text, width):
+        for scale in reversed(range(0, 60, 1)):
+            textSize = cv.getTextSize(text, fontFace=cv.FONT_HERSHEY_SIMPLEX, fontScale=scale / 10, thickness=3)
+            new_width = textSize[0][0]
+            if new_width <= width:
+                return scale / 10
+        return 1
+
+    # Concatenation list of arrays
+    def concat_from_list(frame_list, N_cols, N_rows):
+        row_list = []
+        for r in range(N_rows):
+            row_list.append(np.concatenate(frame_list[N_cols * r: N_cols * (r + 1)], axis=1))
+        return np.concatenate(row_list, axis=0)
+
+    # Подготовим темплейт N_rows * N_cols
+    # Узнаем разрешение экрана
+    W, H = get_screen_resolution()
+    # Размер для вывода на экран
+    W, H = int(W * 0.85), int(H * 0.85)
+    # Размер ячейки
+    w, h = int(W / N_cols), int(H / N_rows)
+    # Всего ячеек
+    N_cells = int(N_cols * N_rows)
+    # Занятых ячеек
+    N_images = len(results)
+    assert N_cells >= N_images, 'Не хватает ячеек для изображений'
+    img_black = np.zeros((h, w, 3), dtype=np.uint8)
+    img_black_list = [img_black for _ in range(N_cells - N_images)]
+    # Готовим список картинок для полного кадра
+    images_list = [cv.resize(results[idx], (w, h), interpolation=cv.INTER_AREA) for idx in range(N_images)] + img_black_list
+    # Нанесем надписи
+    font = cv.FONT_HERSHEY_SIMPLEX
+    for idx in range(N_images):
+        fontScale = get_optimal_font_scale(titles[idx], int(w * 2 / 3))
+        cv.putText(images_list[idx], titles[idx], (40, 40), font, fontScale, (255, 0, 0), 2, cv.LINE_AA)
+    # Собираем и возвращаем полный кадр
+    return concat_from_list(images_list, N_cols, N_rows)
+
+
 # Функция canny
 def opencv_canny(img):
     # Переходим к ч/б
@@ -336,6 +392,9 @@ def opencv_canny(img):
     edges = cv.Canny(gray, CANNY_THRESH_1, CANNY_THRESH_2)
     edges = cv.dilate(edges, None)
     edges = cv.erode(edges, None)
+
+    from PIL import Image
+    Image.fromarray(edges).show()
 
     # -- Find contours in edges, sort by area ---------------------------------------------
     contour_info = []

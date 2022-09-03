@@ -6,6 +6,7 @@
 """
 import numpy as np
 import cv2 as cv
+from PIL import Image
 import sys
 import os
 import random
@@ -33,33 +34,34 @@ def process(source_file, out_path, model_path):
     if not (out_path in os.listdir('.')):
         os.mkdir(out_path)
 
-    # Объявим список куда будем сохранять результаты работы
-    results_list = []
+    # Куда будем сохранять результаты работы
+    results = []  # список картинок
+    titles = []  # список названий
 
     # Загружаем исходное изображение
     img_orig = cv.imread(source_file)
     img_orig = cv.cvtColor(img_orig, cv.COLOR_BGR2RGB)
+    results.append(img_orig)
+    titles.append('original image')
     print('Загрузили картинку размерностью: {}'.format(img_orig.shape))
 
     # Получаем модель и делаем предикт
     model = m.get_model(model_path, VERBOSE)
     pred = m.pred_images(model, img_orig, img_height, img_width)[0]
-    print(pred.shape)
+    results.append(cv.cvtColor(pred, cv.COLOR_GRAY2RGB))  # результат запишем в размерности (w, h, 3)
+    titles.append('predicted mask')
 
-    # Нанесем маску на исходное изображение для визуализации
+    # Нанесем маску на исходное изображение
     ones = np.ones((pred.shape[0], pred.shape[1], 3), dtype=np.uint8)
     img_pred = img_orig.copy()
     img_pred[:, :, 0] = np.where(pred == 255, img_pred[:, :, 0], ones[:, :, 0] * 0)
     img_pred[:, :, 1] = np.where(pred == 255, img_pred[:, :, 1], ones[:, :, 0] * 255)
     img_pred[:, :, 2] = np.where(pred == 255, img_pred[:, :, 2], ones[:, :, 0] * 0)
+    results.append(img_pred)
+    titles.append('mask on image')
 
     # Смотрим что даст преобразование Canny
-    img_canny = u.opencv_canny(u.img_resize_cv(img_orig))
-
-
-
-    from PIL import Image
-    Image.fromarray(img_canny).show()
+    # img_canny = u.opencv_canny(u.img_resize_cv(img_orig))
 
 
 
@@ -68,6 +70,9 @@ def process(source_file, out_path, model_path):
 
 
 
+    # Демонстрируем результаты
+    full_image = u.show_results(results, titles, 3, 2)
+    Image.fromarray(full_image).show()
 
 if __name__ == '__main__':
     """
