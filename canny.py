@@ -4,6 +4,7 @@
 Результаты визуализируем и сохраняем как выходной файл.
 Исходная картинка подается в программу как параметр или берется случайно из папки imgs_fs.
 """
+import numpy as np
 import cv2 as cv
 import sys
 import os
@@ -18,7 +19,8 @@ VERBOSE = True
 img_type_list = ['.jpg', '.jpeg', '.png']
 
 # Размер к которому приводить изображение для нейросети
-IMG_SIZE = 512
+img_height = 512
+img_width = 512
 
 
 def process(source_file, out_path, model_path):
@@ -36,21 +38,32 @@ def process(source_file, out_path, model_path):
 
     # Загружаем исходное изображение
     img_orig = cv.imread(source_file)
-    print('Загрузили картинку размерами: ({},{})'.format(img_orig.shape[0], img_orig.shape[1]))
+    img_orig = cv.cvtColor(img_orig, cv.COLOR_BGR2RGB)
+    print('Загрузили картинку размерностью: {}'.format(img_orig.shape))
 
-    # Делаем предикт моделью
+    # Получаем модель и делаем предикт
+    model = m.get_model(model_path, VERBOSE)
+    pred = m.pred_images(model, img_orig, img_height, img_width)[0]
+    print(pred.shape)
+
+    # Нанесем маску на исходное изображение для визуализации
+    ones = np.ones((pred.shape[0], pred.shape[1], 3), dtype=np.uint8)
+    img_pred = img_orig.copy()
+    img_pred[:, :, 0] = np.where(pred == 255, img_pred[:, :, 0], ones[:, :, 0] * 0)
+    img_pred[:, :, 1] = np.where(pred == 255, img_pred[:, :, 1], ones[:, :, 0] * 255)
+    img_pred[:, :, 2] = np.where(pred == 255, img_pred[:, :, 2], ones[:, :, 0] * 0)
+
+    # Смотрим что даст преобразование Canny
+    img_canny = u.opencv_canny(u.img_resize_cv(img_orig))
 
 
-    # tmp = cv.resize(img_orig, (900, 500), interpolation=cv.INTER_AREA)
-    # cv.imshow('original image', tmp)
-    # cv.waitKey(0)
-    # cv.destroyAllWindows()
 
-    # Делаем предикт моделю
+    from PIL import Image
+    Image.fromarray(img_canny).show()
 
 
-    # Получаем модель
-    # model = m.get_model(model_path, VERBOSE)
+
+
 
 
 

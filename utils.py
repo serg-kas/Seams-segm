@@ -296,4 +296,79 @@ def ohe_to_mask(ann_ohe, classes=[0, 255]):
     return result
 
 
+# Функция ресайза картинки через opencv
+def img_resize_cv(image, img_size=1024):
+    """
+    :param image: исходное изображение
+    :param img_size: размер к которому приводить изображение
+    :return: изображение после ресайза
+    """
+    curr_w = image.shape[1]
+    curr_h = image.shape[0]
+    # Рассчитаем коэффициент для изменения размера
+    if curr_w > curr_h:
+        scale_img = img_size / curr_w
+    else:
+        scale_img = img_size / curr_h
+    # Новые размеры изображения
+    new_width = int(curr_w * scale_img)
+    new_height = int(curr_h * scale_img)
+    # делаем ресайз к целевым размерам
+    image = cv.resize(image, (new_width, new_height), interpolation=cv.INTER_AREA)
+    return image
+
+
+# Функция canny
+def opencv_canny(img):
+    # Переходим к ч/б
+    gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+
+    # == Parameters =======================================================================
+    BLUR = 21
+    CANNY_THRESH_1 = 10
+    CANNY_THRESH_2 = 200
+    MASK_DILATE_ITER = 10
+    MASK_ERODE_ITER = 10
+    MASK_COLOR = (1.0, 0.0, 0.0)  # Red mask
+    # MASK_COLOR = (0.5, 0.5, 0.5)  # Gray Mask
+
+    # -- Edge detection -------------------------------------------------------------------
+    edges = cv.Canny(gray, CANNY_THRESH_1, CANNY_THRESH_2)
+    edges = cv.dilate(edges, None)
+    edges = cv.erode(edges, None)
+
+    # -- Find contours in edges, sort by area ---------------------------------------------
+    contour_info = []
+    contours, _ = cv.findContours(edges, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
+    for c in contours:
+        contour_info.append((
+            c,
+            cv.isContourConvex(c),
+            cv.contourArea(c),
+        ))
+    contour_info = sorted(contour_info, key=lambda c: c[2], reverse=True)
+    max_contour = contour_info[0]
+
+    # -- Create empty mask, draw filled polygon on it corresponding to largest contour ----
+    # Mask is black, polygon is white
+    mask = np.zeros(edges.shape)
+    cv.fillConvexPoly(mask, max_contour[0], (255))
+
+    # -- Smooth mask, then blur it --------------------------------------------------------
+    mask = cv.dilate(mask, None, iterations=MASK_DILATE_ITER)
+    mask = cv.erode(mask, None, iterations=MASK_ERODE_ITER)
+    mask = cv.GaussianBlur(mask, (BLUR, BLUR), 0)
+
+    mask_stack = np.dstack([mask] * 3)  # Create 3-channel alpha mask
+
+    # -- Blend masked img into MASK_COLOR background --------------------------------------
+    mask_stack = mask_stack.astype('float32') / 255.0  # Use float matrices,
+    img = img.astype('float32') / 255.0  # for easy blending
+
+    masked = (mask_stack * img) + ((1 - mask_stack) * MASK_COLOR)  # Blend
+    masked = (masked * 255).astype('uint8')  # Convert back to 8-bit
+    return masked
+
+
+
 
