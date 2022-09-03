@@ -61,7 +61,10 @@ def process(source_file, out_path, model_path):
     titles.append('mask on image')
 
     # Смотрим что даст преобразование Canny
-    # img_canny = u.opencv_canny(u.img_resize_cv(img_orig))
+    # Подаем в функцию с ресайзом, а то очень долго
+    img_canny = u.opencv_canny(u.img_resize_cv(img_orig))
+    results.append(img_canny)
+    titles.append('canny on image')
 
 
 

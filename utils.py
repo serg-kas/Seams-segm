@@ -2,9 +2,11 @@
 import numpy as np
 import cv2 as cv
 import os
+import random
 import time
 import re
 import tkinter as tk  # используем чтобы узнать разрешение экрана
+from PIL import Image
 
 
 # Функция проверки нужен ли этот файл для обработки
@@ -376,57 +378,39 @@ def show_results(results, titles, N_cols=3, N_rows=2):
 
 # Функция canny
 def opencv_canny(img):
-    # Переходим к ч/б
-    gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    # To hsv
+    hsv = cv.cvtColor(img, cv.COLOR_BGR2HSV)
 
-    # == Parameters =======================================================================
-    BLUR = 21
-    CANNY_THRESH_1 = 10
-    CANNY_THRESH_2 = 200
-    MASK_DILATE_ITER = 10
-    MASK_ERODE_ITER = 10
-    MASK_COLOR = (1.0, 0.0, 0.0)  # Red mask
-    # MASK_COLOR = (0.5, 0.5, 0.5)  # Gray Mask
+    # Get the Saturation out
+    S = hsv[:, :, 1]
 
-    # -- Edge detection -------------------------------------------------------------------
-    edges = cv.Canny(gray, CANNY_THRESH_1, CANNY_THRESH_2)
-    edges = cv.dilate(edges, None)
-    edges = cv.erode(edges, None)
+    # Threshold it
+    (ret, T) = cv.threshold(S, 42, 255, cv.THRESH_BINARY)
 
-    from PIL import Image
-    Image.fromarray(edges).show()
+    # Show intermediate result
+    Image.fromarray(T).show()
 
-    # -- Find contours in edges, sort by area ---------------------------------------------
-    contour_info = []
-    contours, _ = cv.findContours(edges, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
+    # Find contours
+    contours, h = cv.findContours(T, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+
+    # img2 = img.copy()
+
     for c in contours:
-        contour_info.append((
-            c,
-            cv.isContourConvex(c),
-            cv.contourArea(c),
-        ))
-    contour_info = sorted(contour_info, key=lambda c: c[2], reverse=True)
-    max_contour = contour_info[0]
+        area = cv.contourArea(c)
+        # Only if the area is not miniscule (arbitrary)
+        if area > 100:
+            (x, y, w, h) = cv.boundingRect(c)
 
-    # -- Create empty mask, draw filled polygon on it corresponding to largest contour ----
-    # Mask is black, polygon is white
-    mask = np.zeros(edges.shape)
-    cv.fillConvexPoly(mask, max_contour[0], (255))
+            # Uncomment if you want to draw the contours
+            # cv2.drawContours(img, [c], -1, (0, 255, 0), 2)
 
-    # -- Smooth mask, then blur it --------------------------------------------------------
-    mask = cv.dilate(mask, None, iterations=MASK_DILATE_ITER)
-    mask = cv.erode(mask, None, iterations=MASK_ERODE_ITER)
-    mask = cv.GaussianBlur(mask, (BLUR, BLUR), 0)
+            # Get random color for each brick
+            tpl = tuple([random.randint(0, 255) for _ in range(3)])
+            cv.rectangle(img, (x, y), (x + w, y + h), tpl, -1)
 
-    mask_stack = np.dstack([mask] * 3)  # Create 3-channel alpha mask
+    Image.fromarray(img).show()
 
-    # -- Blend masked img into MASK_COLOR background --------------------------------------
-    mask_stack = mask_stack.astype('float32') / 255.0  # Use float matrices,
-    img = img.astype('float32') / 255.0  # for easy blending
-
-    masked = (mask_stack * img) + ((1 - mask_stack) * MASK_COLOR)  # Blend
-    masked = (masked * 255).astype('uint8')  # Convert back to 8-bit
-    return masked
+    return img
 
 
 
