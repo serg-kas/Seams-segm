@@ -143,7 +143,6 @@ def unet(num_classes=2, input_shape=(1024, 1024, 3)):
     model.compile(optimizer=Adam(),
                   loss='categorical_crossentropy',
                   metrics=[dice_coef])
-
     return model
 
 
@@ -151,8 +150,8 @@ def unet(num_classes=2, input_shape=(1024, 1024, 3)):
 def pred_images(model, images_list, img_height, img_width):
     """
     :param model: путь к  модели для загрузки
-    :param images_list: список изображений для обрабоки (можно подать и одиночную картинку)
-    :return: mask_list или mask: список обработанных изображений или одну маску
+    :param images_list: список изображений или одиночная картинка для обработки
+    :return: mask_list: список обработанных изображений или одну маску
     """
     # Список для возврата из функции
     mask_list = []
@@ -173,7 +172,7 @@ def pred_images(model, images_list, img_height, img_width):
         # переходим к RGB
         curr_image = cv.cvtColor(curr_image, cv.COLOR_BGR2RGB)
 
-        # делаем ресайз к целевым размерам
+        # делаем ресайз к целевым размерам для нейронки
         curr_image = cv.resize(curr_image, (img_width, img_height), interpolation=cv.INTER_AREA)
 
         # нормализуем
@@ -197,27 +196,31 @@ def pred_images(model, images_list, img_height, img_width):
         if mask_list is not None:
             mask_list.append(mask)
 
+    # возвращаем в любом случае список масок
     if mask_list is None:
-        return mask
-    else:
-        return mask_list
+        mask_list = [mask]
+    return mask_list
 
 
 # Функция получения модели
-def get_model(model_path):
+def get_model(model_path, verbose=False):
     """
     :param model_path: путь к  модели для загрузки
+    :param verbose: выводить дополнительную информацию
     :return: model: загруженная модель
     """
 
     gpu_present = bool(len(tf.config.list_physical_devices('GPU')))
-    if gpu_present:
+    if gpu_present and verbose:
         print('GPU found')
-    else:
+    elif not gpu_present and verbose:
         print('No GPU found')
 
+    if verbose:
+        print('Загружаем модель: {}'.format(model_path))
     time_start = time.time()
     model = load_model(model_path, custom_objects={'dice_coef': dice_coef})
     time_end = time.time() - time_start
-    print('Время загрузки модели: {0:.1f}'.format(time_end))
+    if verbose:
+        print('Время загрузки модели, с: {0:.1f}'.format(time_end))
     return model
