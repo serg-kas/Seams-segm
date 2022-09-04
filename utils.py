@@ -371,30 +371,22 @@ def show_results(results, titles, N_cols=3, N_rows=2):
     font = cv.FONT_HERSHEY_SIMPLEX
     for idx in range(N_images):
         fontScale = get_optimal_font_scale(titles[idx], int(w * 2 / 3))
-        cv.putText(images_list[idx], titles[idx], (40, 40), font, fontScale, (255, 0, 0), 2, cv.LINE_AA)
+        cv.putText(images_list[idx], titles[idx], (40, 40), font, fontScale, (0, 0, 255), 2, cv.LINE_AA)
     # Собираем и возвращаем полный кадр
     return concat_from_list(images_list, N_cols, N_rows)
 
 
-# Функция canny
-def opencv_canny(img):
+# Функция контуры на основе бинаризации hsv
+def opencv_contours(img):
     # To hsv
     hsv = cv.cvtColor(img, cv.COLOR_BGR2HSV)
-
     # Get the Saturation out
     S = hsv[:, :, 1]
-
     # Threshold it
-    (ret, T) = cv.threshold(S, 42, 255, cv.THRESH_BINARY)
-
-    # Show intermediate result
-    Image.fromarray(T).show()
-
+    (ret, T) = cv.threshold(S, 32, 255, cv.THRESH_BINARY)
     # Find contours
     contours, h = cv.findContours(T, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-
     # img2 = img.copy()
-
     for c in contours:
         area = cv.contourArea(c)
         # Only if the area is not miniscule (arbitrary)
@@ -402,14 +394,11 @@ def opencv_canny(img):
             (x, y, w, h) = cv.boundingRect(c)
 
             # Uncomment if you want to draw the contours
-            # cv2.drawContours(img, [c], -1, (0, 255, 0), 2)
+            cv.drawContours(img, [c], -1, (0, 255, 0), 2)
 
             # Get random color for each brick
             tpl = tuple([random.randint(0, 255) for _ in range(3)])
             cv.rectangle(img, (x, y), (x + w, y + h), tpl, -1)
-
-    Image.fromarray(img).show()
-
     return img
 
 
