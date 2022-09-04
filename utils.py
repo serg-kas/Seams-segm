@@ -386,21 +386,113 @@ def opencv_contours(img):
     (ret, T) = cv.threshold(S, 32, 255, cv.THRESH_BINARY)
     # Find contours
     contours, h = cv.findContours(T, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-    # img2 = img.copy()
+    # contours, h = cv.findContours(T, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+
+    #
     for c in contours:
         area = cv.contourArea(c)
         # Only if the area is not miniscule (arbitrary)
         if area > 100:
             (x, y, w, h) = cv.boundingRect(c)
 
-            # Uncomment if you want to draw the contours
-            cv.drawContours(img, [c], -1, (0, 255, 0), 2)
+            # cv.drawContours(img, [c], -1, (0, 255, 0), 2)
 
             # Get random color for each brick
             tpl = tuple([random.randint(0, 255) for _ in range(3)])
             cv.rectangle(img, (x, y), (x + w, y + h), tpl, -1)
     return img
 
+
+# Функция получения контура маски и заливки его результатом преобразования canny
+def cut_and_canny_contour_cv(image, mask, cnt_thickness=4, kernel=(5, 5)):
+    """
+    :param img:
+    :param mask:
+    :param cnt_thickness:
+    :param kernel:
+    :return: result: изображение с нанесенной маской
+    """
+    #
+    image_backup = image.copy()
+
+    # Накладываем полученную маску [mask] на изображение
+    img = apply_mask(image, mask)  # своя функция наложения маски
+    tmp = img.copy()
+    # prepare a blurred image
+    blur = cv2.GaussianBlur(img, kernel, 0)
+    # find contours
+    contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    # draw contours using passed [cnt_thickness] on a temporary image
+    _ = cv2.drawContours(tmp, contours, 0, (0, 255, 0), cnt_thickness)
+    # create contour mask
+    hsv = cv2.cvtColor(tmp, cv2.COLOR_RGB2HSV)
+    cont_mask = cv2.inRange(hsv, (36, 25, 25), (70, 255, 255))
+
+    # EXPERIMENTAL
+    cont_mask = cv2.dilate(cont_mask, None, iterations=1)
+    cont_mask = cv2.erode(cont_mask, None, iterations=3)
+
+    # apply contour mask
+    tmp = cv2.bitwise_and(blur, blur, mask=cont_mask)
+    # Image.fromarray(tmp).show()
+
+    # ==== CANNY =====
+    # Переходим к ч/б
+    gray = cv2.cvtColor(image_backup, cv2.COLOR_BGR2GRAY)
+
+    # == Parameters =======================================================================
+    BLUR = 21
+    CANNY_THRESH_1 = 10
+    CANNY_THRESH_2 = 200
+    MASK_DILATE_ITER = 10
+    MASK_ERODE_ITER = 10
+    # MASK_COLOR = (0.0, 0.0, 1.0)  # Red mask
+    MASK_COLOR = (0.5, 0.5, 0.5)  # Gray Mask
+    # MASK_COLOR = (0.0, 0.0, 0.0)  # Black Mask
+
+    # -- Edge detection -------------------------------------------------------------------
+    edges = cv2.Canny(gray, CANNY_THRESH_1, CANNY_THRESH_2)
+    edges = cv2.dilate(edges, None)
+    edges = cv2.erode(edges, None)
+
+    # -- Find contours in edges, sort by area ---------------------------------------------
+    contour_info = []
+    contours, _ = cv2.findContours(edges, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    for c in contours:
+        contour_info.append((
+            c,
+            cv2.isContourConvex(c),
+            cv2.contourArea(c),
+        ))
+    contour_info = sorted(contour_info, key=lambda c: c[2], reverse=True)
+    max_contour = contour_info[0]
+
+    # -- Create empty mask, draw filled polygon on it corresponding to largest contour ----
+    # Mask is black, polygon is white
+    canny_mask = np.zeros(edges.shape)
+    cv2.fillConvexPoly(canny_mask, max_contour[0], (255))
+
+    # -- Smooth mask, then blur it --------------------------------------------------------
+    canny_mask = cv2.dilate(canny_mask, None, iterations=MASK_DILATE_ITER)
+    canny_mask = cv2.erode(canny_mask, None, iterations=MASK_ERODE_ITER)
+    canny_mask = cv2.GaussianBlur(canny_mask, (BLUR, BLUR), 0)
+
+    mask_stack = np.dstack([canny_mask] * 3)  # Create 3-channel alpha mask
+
+    # -- Blend masked img into MASK_COLOR background --------------------------------------
+    mask_stack = mask_stack.astype('float32') / 255.0  # Use float matrices,
+    tmp_img = image.astype('float32') / 255.0  # for easy blending
+
+    canny_masked = (mask_stack * tmp_img) + ((1 - mask_stack) * MASK_COLOR)  # Blend
+    canny_masked = (canny_masked * 255).astype('uint8')  # Convert back to 8-bit
+    # Image.fromarray(canny_masked).show()
+
+    #
+    # result = np.where(tmp > 0, blur, img)
+    # result = np.where(tmp > 0, canny_masked, result)
+    result = np.where(tmp > 0, canny_masked, img)
+    # Image.fromarray(result).show()
+    return result
 
 
 

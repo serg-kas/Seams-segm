@@ -42,8 +42,8 @@ def process(source_file, out_path, model_path):
     titles = []  # список названий
 
     # Загружаем ИСХОДНОЕ ИЗОБРАЖЕНИЕ
-    img_orig = cv.imread(source_file)
-    img_orig = cv.cvtColor(img_orig, cv.COLOR_BGR2RGB)
+    img_bgr = cv.imread(source_file)
+    img_orig = cv.cvtColor(img_bgr, cv.COLOR_BGR2RGB)
     results.append(img_orig)
     titles.append('original image')
     print('Загрузили картинку размерностью: {}'.format(img_orig.shape))
@@ -81,8 +81,7 @@ def process(source_file, out_path, model_path):
         print('Сохранили изображение с маской размерностью: {}'.format(img_pred.shape))
 
     # Смотрим HSV & THRESH_BINARY
-    hsv = cv.cvtColor(img_orig, cv.COLOR_BGR2HSV)
-    # hsv = cv.cvtColor(img_autocont, cv.COLOR_BGR2HSV)
+    hsv = cv.cvtColor(img_bgr, cv.COLOR_BGR2HSV)
     S = hsv[:, :, 1]
     (ret, img_hsv_thresh) = cv.threshold(S, 32, 255, cv.THRESH_BINARY)
     results.append(cv.cvtColor(img_hsv_thresh, cv.COLOR_GRAY2RGB))  # результат запишем в размерности (w, h, 3)
@@ -93,8 +92,7 @@ def process(source_file, out_path, model_path):
         print('Сохранили изображение HSV & THRESH_BINARY: {}'.format(img_hsv_thresh.shape))
 
     # Преобразование HSV & THRESH_BINARY -> CONTOURS
-    img_contours = u.opencv_contours(img_orig.copy())
-    # img_contours = u.opencv_contours(img_autocont.copy())
+    img_contours = u.opencv_contours(img_bgr.copy())
     results.append(img_contours)
     titles.append('binary -> contours')
     if SAVE_ALL:
@@ -108,17 +106,46 @@ def process(source_file, out_path, model_path):
         results.append(img_black)
         titles.append('')
 
+    # Преобразование CANNY над ОРИГИНАЛОМ
+    gray = cv.cvtColor(img_orig, cv.COLOR_RGB2GRAY)
+    edges = cv.Canny(gray, 30, 200)
+    results.append(cv.cvtColor(edges, cv.COLOR_GRAY2RGB))  # результат запишем в размерности (w, h, 3)
+    titles.append('canny edges')
+    if SAVE_ALL:
+        out_file = os.path.join(out_path, 'canny_edges' + os.path.basename(source_file))
+        cv.imwrite(out_file, edges)
+        print('Сохранили изображение Canny edges: {}'.format(edges))
 
+    # Преобразование CANNY -> CONTOURS
+    gray = cv.cvtColor(img_orig, cv.COLOR_RGB2GRAY)
+    #
+    CANNY_THRESH_1 = 10
+    CANNY_THRESH_2 = 200
+    #
+    edges = cv.Canny(gray, CANNY_THRESH_1, CANNY_THRESH_2)
+    edges = cv.dilate(edges, None)
+    edges = cv.erode(edges, None)
+    #
+    contours, h = cv.findContours(edges, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    # contours, h = cv.findContours(edges, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    #
+    for c in contours:
+        area = cv.contourArea(c)
+        # Only if the area is not miniscule (arbitrary)
+        if area > 100:
+            (x, y, w, h) = cv.boundingRect(c)
 
-    # Преобразование  CANNY над ОРИГИНАЛОН
-    # # Подаем в функцию с ресайзом, а то очень долго
-    # img_canny = u.opencv_canny(u.img_resize_cv(img_orig))
-    # results.append(img_canny)
-    # titles.append('canny on image')
-    # out_file = os.path.join(out_path, 'mask_on_img_' + os.path.basename(source_file))
-    # cv.imwrite(out_file, img_pred)
-    # print('Сохранили изображение с маской размерностью: {}'.format(img_pred.shape))
+            # cv.drawContours(img, [c], -1, (0, 255, 0), 2)
 
+            # Get random color
+            tpl = tuple([random.randint(0, 255) for _ in range(3)])
+            cv.rectangle(edges, (x, y), (x + w, y + h), tpl, -1)
+    results.append(cv.cvtColor(edges, cv.COLOR_GRAY2RGB))  # результат запишем в размерности (w, h, 3)
+    titles.append('canny -> contours')
+    if SAVE_ALL:
+        out_file = os.path.join(out_path, 'canny_contours' + os.path.basename(source_file))
+        cv.imwrite(out_file, edges)
+        print('Сохранили изображение Canny contours: {}'.format(edges))
 
 
 
