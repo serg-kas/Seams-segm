@@ -6,7 +6,6 @@ import random
 import time
 import re
 import tkinter as tk  # используем чтобы узнать разрешение экрана
-from PIL import Image
 
 
 # Функция проверки нужен ли этот файл для обработки
@@ -329,7 +328,7 @@ def show_results(results, titles, N_cols=3, N_rows=2):
         root = tk.Tk()
         W = root.winfo_screenwidth()
         H = root.winfo_screenheight()
-        print('Screen resolution: ({},{})'.format(W, H))
+        print('Info: Screen resolution: ({},{})'.format(W, H))
         if W < 1024 or H < 768:
             W = 1200
             H = 800
@@ -403,6 +402,7 @@ def opencv_contours(img):
     return img
 
 
+# ПОКА НЕ РЕДАКТИРОВАЛАСЬ
 # Функция получения контура маски и заливки его результатом преобразования canny
 def cut_and_canny_contour_cv(image, mask, cnt_thickness=4, kernel=(5, 5)):
     """
@@ -412,6 +412,16 @@ def cut_and_canny_contour_cv(image, mask, cnt_thickness=4, kernel=(5, 5)):
     :param kernel:
     :return: result: изображение с нанесенной маской
     """
+    def apply_mask(image, mask):
+        """
+        :param image: исходное изображение
+        :param mask: маска
+        :return: изображение с наложенной маской
+        """
+        image[:, :, 0] = np.where(mask == 0, 127, image[:, :, 0])
+        image[:, :, 1] = np.where(mask == 0, 127, image[:, :, 1])
+        image[:, :, 2] = np.where(mask == 0, 127, image[:, :, 2])
+        return image
     #
     image_backup = image.copy()
 
@@ -419,26 +429,26 @@ def cut_and_canny_contour_cv(image, mask, cnt_thickness=4, kernel=(5, 5)):
     img = apply_mask(image, mask)  # своя функция наложения маски
     tmp = img.copy()
     # prepare a blurred image
-    blur = cv2.GaussianBlur(img, kernel, 0)
+    blur = cv.GaussianBlur(img, kernel, 0)
     # find contours
-    contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours, hierarchy = cv.findContours(mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     # draw contours using passed [cnt_thickness] on a temporary image
-    _ = cv2.drawContours(tmp, contours, 0, (0, 255, 0), cnt_thickness)
+    _ = cv.drawContours(tmp, contours, 0, (0, 255, 0), cnt_thickness)
     # create contour mask
-    hsv = cv2.cvtColor(tmp, cv2.COLOR_RGB2HSV)
-    cont_mask = cv2.inRange(hsv, (36, 25, 25), (70, 255, 255))
+    hsv = cv.cvtColor(tmp, cv.COLOR_RGB2HSV)
+    cont_mask = cv.inRange(hsv, (36, 25, 25), (70, 255, 255))
 
     # EXPERIMENTAL
-    cont_mask = cv2.dilate(cont_mask, None, iterations=1)
-    cont_mask = cv2.erode(cont_mask, None, iterations=3)
+    cont_mask = cv.dilate(cont_mask, None, iterations=1)
+    cont_mask = cv.erode(cont_mask, None, iterations=3)
 
     # apply contour mask
-    tmp = cv2.bitwise_and(blur, blur, mask=cont_mask)
+    tmp = cv.bitwise_and(blur, blur, mask=cont_mask)
     # Image.fromarray(tmp).show()
 
     # ==== CANNY =====
     # Переходим к ч/б
-    gray = cv2.cvtColor(image_backup, cv2.COLOR_BGR2GRAY)
+    gray = cv.cvtColor(image_backup, cv.COLOR_BGR2GRAY)
 
     # == Parameters =======================================================================
     BLUR = 21
@@ -451,18 +461,18 @@ def cut_and_canny_contour_cv(image, mask, cnt_thickness=4, kernel=(5, 5)):
     # MASK_COLOR = (0.0, 0.0, 0.0)  # Black Mask
 
     # -- Edge detection -------------------------------------------------------------------
-    edges = cv2.Canny(gray, CANNY_THRESH_1, CANNY_THRESH_2)
-    edges = cv2.dilate(edges, None)
-    edges = cv2.erode(edges, None)
+    edges = cv.Canny(gray, CANNY_THRESH_1, CANNY_THRESH_2)
+    edges = cv.dilate(edges, None)
+    edges = cv.erode(edges, None)
 
     # -- Find contours in edges, sort by area ---------------------------------------------
     contour_info = []
-    contours, _ = cv2.findContours(edges, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    contours, _ = cv.findContours(edges, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
     for c in contours:
         contour_info.append((
             c,
-            cv2.isContourConvex(c),
-            cv2.contourArea(c),
+            cv.isContourConvex(c),
+            cv.contourArea(c),
         ))
     contour_info = sorted(contour_info, key=lambda c: c[2], reverse=True)
     max_contour = contour_info[0]
@@ -470,12 +480,12 @@ def cut_and_canny_contour_cv(image, mask, cnt_thickness=4, kernel=(5, 5)):
     # -- Create empty mask, draw filled polygon on it corresponding to largest contour ----
     # Mask is black, polygon is white
     canny_mask = np.zeros(edges.shape)
-    cv2.fillConvexPoly(canny_mask, max_contour[0], (255))
+    cv.fillConvexPoly(canny_mask, max_contour[0], (255))
 
     # -- Smooth mask, then blur it --------------------------------------------------------
-    canny_mask = cv2.dilate(canny_mask, None, iterations=MASK_DILATE_ITER)
-    canny_mask = cv2.erode(canny_mask, None, iterations=MASK_ERODE_ITER)
-    canny_mask = cv2.GaussianBlur(canny_mask, (BLUR, BLUR), 0)
+    canny_mask = cv.dilate(canny_mask, None, iterations=MASK_DILATE_ITER)
+    canny_mask = cv.erode(canny_mask, None, iterations=MASK_ERODE_ITER)
+    canny_mask = cv.GaussianBlur(canny_mask, (BLUR, BLUR), 0)
 
     mask_stack = np.dstack([canny_mask] * 3)  # Create 3-channel alpha mask
 

@@ -212,9 +212,9 @@ def get_model(model_path, verbose=False):
 
     gpu_present = bool(len(tf.config.list_physical_devices('GPU')))
     if gpu_present and verbose:
-        print('GPU found')
+        print('Info: GPU found')
     elif not gpu_present and verbose:
-        print('No GPU found')
+        print('Info: No GPU found')
 
     if verbose:
         print('Загружаем модель: {}'.format(model_path))
