@@ -27,7 +27,7 @@ img_width = 512
 SAVE_ALL = False
 
 # Сколько картинок обрабатывать если берем случайно из папки
-N_repeat = 1
+N_repeat = 10
 
 
 def process(source_file, out_path, model):
@@ -46,7 +46,7 @@ def process(source_file, out_path, model):
 
     # Загружаем ИСХОДНОЕ ИЗОБРАЖЕНИЕ
     img_bgr = cv.imread(source_file)
-    # img_bgr = u.img_resize_cv(img_bgr, 2048)  # ЗАКОМЕНТИРОВАТЬ
+    img_bgr = u.img_resize_cv(img_bgr, 2048)  # ЗАКОМЕНТИРОВАТЬ
     img_rgb = cv.cvtColor(img_bgr, cv.COLOR_BGR2RGB)
     results.append(img_rgb)
     titles.append('original image')
@@ -103,7 +103,7 @@ def process(source_file, out_path, model):
         cv.imwrite(out_file, img_contours)
         print('Сохранили изображение с контурами: {}'.format(img_contours.shape))
 
-    # Определение цвета швов и фильтрация по HSV
+    # ОПРЕДЕЛЕНИЕ ЦВЕТА швов и ФИЛЬТРАЦИЯ по HSV
     # Берем изображение и маску от предикта нейронкой
     img = img_rgb.copy()
     mask = pred.copy()
@@ -117,7 +117,7 @@ def process(source_file, out_path, model):
     img_hsv_flat = np.reshape(img_hsv, (-1, 3))
     hsv_uniq = np.unique(img_hsv_flat, axis=0)
     # print(hsv_uniq[:5])
-    hsv_uniq = hsv_uniq[1:]
+    hsv_uniq = hsv_uniq[1:]  # первым был [0,0,0]
 
     h_min = np.min(hsv_uniq[:,0])
     h_max = np.max(hsv_uniq[:,0])
@@ -132,12 +132,13 @@ def process(source_file, out_path, model):
     high_HSV = np.array([h_max, s_max, v_max])
     # print(min_HSV, high_HSV)
 
-    # Thresholding using HSV ranges
+    # Threshold по диапазону HSV
     kernel = np.ones((3, 3), np.uint8)
     new_mask = cv.inRange(img_hsv, low_HSV, high_HSV)
     # new_mask = cv.dilate(new_mask, kernel, iterations=2)
     # img_res = cv.bitwise_and(img, img, mask=new_mask)
     img_res = np.zeros((img.shape[0], img.shape[1], 3), dtype=np.uint8)
+    ones = np.ones((img.shape[0], img.shape[1], 3), dtype=np.uint8)
     img_res[:, :, 0] = np.where(new_mask == 0, img[:, :, 0], ones[:, :, 1] * 0)
     img_res[:, :, 1] = np.where(new_mask == 0, img[:, :, 1], ones[:, :, 1] * 255)
     img_res[:, :, 2] = np.where(new_mask == 0, img[:, :, 2], ones[:, :, 1] * 0)
