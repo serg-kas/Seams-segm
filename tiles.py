@@ -144,9 +144,9 @@ def process(source_file, out_path, model):
     img_res[:, :, 2] = np.where(new_mask == 0, img[:, :, 2], ones[:, :, 1] * 0)
 
     results.append(img_res)
-    titles.append('pred -> seams')
+    titles.append('pred -> hsv')
     if SAVE_ALL:
-        out_file = os.path.join(out_path, 'seams_img_' + os.path.basename(source_file))
+        out_file = os.path.join(out_path, 'pred_hsv_img_' + os.path.basename(source_file))
         cv.imwrite(out_file, img_res)
         print('Сохранили изображение швы по маске: {}'.format(img_res.shape))
 
@@ -205,24 +205,24 @@ def process(source_file, out_path, model):
         titles.append('')
 
     # Преобразование TEST
-    test = u.cut_and_canny_contour_cv(img_rgb.copy(), pred.copy())
+    # test = u.cut_and_canny_contour_cv(img_rgb.copy(), pred.copy())
+    # #
+    # results.append(test)  # результат запишем в размерности (w, h, 3)
+    # titles.append('testing')
+    # if SAVE_ALL:
+    #     out_file = os.path.join(out_path, 'test_' + os.path.basename(source_file))
+    #     cv.imwrite(out_file, edges)
+    #     print('Сохранили изображение TEST: {}'.format(test))
     #
-    results.append(test)  # результат запишем в размерности (w, h, 3)
-    titles.append('testing')
-    if SAVE_ALL:
-        out_file = os.path.join(out_path, 'test_' + os.path.basename(source_file))
-        cv.imwrite(out_file, edges)
-        print('Сохранили изображение TEST: {}'.format(test))
-
-    #################################
-    # Сводная картинка с результатами
-    full_image = u.show_results(results, titles, 4, 3)
-    out_file = os.path.join(out_path, 'all_results_' + os.path.basename(source_file))
-    # Сохраняем изображение
-    result = Image.fromarray(full_image)
-    result.save(out_file)
-    print('Сохранили результаты работы: {}'.format(out_file))
-    Image.fromarray(full_image).show()
+    # #################################
+    # # Сводная картинка с результатами
+    # full_image = u.show_results(results, titles, 4, 3)
+    # out_file = os.path.join(out_path, 'all_results_' + os.path.basename(source_file))
+    # # Сохраняем изображение
+    # result = Image.fromarray(full_image)
+    # result.save(out_file)
+    # print('Сохранили результаты работы: {}'.format(out_file))
+    # Image.fromarray(full_image).show()
 
 if __name__ == '__main__':
     """
