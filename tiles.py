@@ -213,16 +213,17 @@ def process(source_file, out_path, model):
     #     out_file = os.path.join(out_path, 'test_' + os.path.basename(source_file))
     #     cv.imwrite(out_file, edges)
     #     print('Сохранили изображение TEST: {}'.format(test))
-    #
-    # #################################
-    # # Сводная картинка с результатами
-    # full_image = u.show_results(results, titles, 4, 3)
-    # out_file = os.path.join(out_path, 'all_results_' + os.path.basename(source_file))
-    # # Сохраняем изображение
-    # result = Image.fromarray(full_image)
-    # result.save(out_file)
-    # print('Сохранили результаты работы: {}'.format(out_file))
-    # Image.fromarray(full_image).show()
+
+    #################################
+    # Сводная картинка с результатами
+    full_image = u.show_results(results, titles, 4, 3)
+    out_file = os.path.join(out_path, 'all_results_' + os.path.basename(source_file))
+    # Сохраняем изображение
+    result = Image.fromarray(full_image)
+    result.save(out_file)
+    print('Сохранили результаты работы: {}'.format(out_file))
+    Image.fromarray(full_image).show()
+
 
 if __name__ == '__main__':
     """
