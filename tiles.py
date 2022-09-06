@@ -24,10 +24,10 @@ img_height = 512
 img_width = 512
 
 # Сохранять все результаты (иначе только сводную картинку)
-SAVE_ALL = False
+SAVE_ALL = True
 
 # Сколько картинок обрабатывать если берем случайно из папки
-N_repeat = 10
+N_repeat = 1
 
 
 def process(source_file, out_path, model):
@@ -56,19 +56,15 @@ def process(source_file, out_path, model):
     img_autocont = u.autocontrast(img_rgb)
     results.append(img_autocont)
     titles.append('auto contrast')
-    if SAVE_ALL:
-        out_file = os.path.join(out_path, 'auto_cont_' + os.path.basename(source_file))
-        cv.imwrite(out_file, img_autocont)
-        print('Сохранили рез-т автоконтраста размерностью: {}'.format(img_autocont.shape))
 
     # Делаем ПРЕДИКТ МАСКИ
     pred = m.pred_images(model, img_rgb, img_height, img_width)[0]
     results.append(cv.cvtColor(pred, cv.COLOR_GRAY2RGB))  # результат запишем в размерности (w, h, 3)
     titles.append('predicted mask')
     if SAVE_ALL:
-        out_file = os.path.join(out_path, 'mask_predict_' + os.path.basename(source_file))
+        out_file = os.path.join(out_path, 'mask_pred_' + os.path.basename(source_file))
         cv.imwrite(out_file, pred)
-        print('Сохранили предикт маски размерностью: {}'.format(pred.shape))
+        print('Сохранили маску по предикту: {}'.format(pred.shape))
 
     # Наложим МАСКУ НА ИЗОБРАЖЕНИЕ
     ones = np.ones((pred.shape[0], pred.shape[1], 3), dtype=np.uint8)
@@ -77,31 +73,19 @@ def process(source_file, out_path, model):
     img_pred[:, :, 1] = np.where(pred == 255, img_pred[:, :, 1], ones[:, :, 1] * 255)
     img_pred[:, :, 2] = np.where(pred == 255, img_pred[:, :, 2], ones[:, :, 2] * 0)
     results.append(img_pred)
-    titles.append('mask on image')
-    if SAVE_ALL:
-        out_file = os.path.join(out_path, 'mask_on_img_' + os.path.basename(source_file))
-        cv.imwrite(out_file, img_pred)
-        print('Сохранили изображение с маской размерностью: {}'.format(img_pred.shape))
+    titles.append('masked image-1')
 
     # Смотрим HSV & THRESH_BINARY
     hsv = cv.cvtColor(img_bgr, cv.COLOR_BGR2HSV)
     S = hsv[:, :, 1]
     (ret, img_hsv_thresh) = cv.threshold(S, 32, 255, cv.THRESH_BINARY)
     results.append(cv.cvtColor(img_hsv_thresh, cv.COLOR_GRAY2RGB))  # результат запишем в размерности (w, h, 3)
-    titles.append('hsv -> binary')
-    if SAVE_ALL:
-        out_file = os.path.join(out_path, 'hsv_thresh_img_' + os.path.basename(source_file))
-        cv.imwrite(out_file, img_hsv_thresh)
-        print('Сохранили изображение HSV & THRESH_BINARY: {}'.format(img_hsv_thresh.shape))
+    titles.append('hsv -> thresh')
 
     # Преобразование HSV & THRESH_BINARY -> CONTOURS
     img_contours = u.opencv_contours(img_bgr.copy())
     results.append(img_contours)
-    titles.append('binary -> contours')
-    if SAVE_ALL:
-        out_file = os.path.join(out_path, 'contours_img_' + os.path.basename(source_file))
-        cv.imwrite(out_file, img_contours)
-        print('Сохранили изображение с контурами: {}'.format(img_contours.shape))
+    titles.append('thresh -> contours')
 
     # ОПРЕДЕЛЕНИЕ ЦВЕТА швов и ФИЛЬТРАЦИЯ по HSV
     # Берем изображение и маску от предикта нейронкой
@@ -119,22 +103,22 @@ def process(source_file, out_path, model):
     # print(hsv_uniq[:5])
     hsv_uniq = hsv_uniq[1:]  # первым был [0,0,0]
 
-    h_min = np.min(hsv_uniq[:,0])
-    h_max = np.max(hsv_uniq[:,0])
+    h_min = np.min(hsv_uniq[:, 0])
+    h_max = np.max(hsv_uniq[:, 0])
 
-    s_min = np.min(hsv_uniq[:,1])
-    s_max = np.max(hsv_uniq[:,1])
+    s_min = np.min(hsv_uniq[:, 1])
+    s_max = np.max(hsv_uniq[:, 1])
 
-    v_min = np.min(hsv_uniq[:,2])
-    v_max = np.max(hsv_uniq[:,2])
+    v_min = np.min(hsv_uniq[:, 2])
+    v_max = np.max(hsv_uniq[:, 2])
 
     low_HSV = np.array([h_min, s_min, v_min])
     high_HSV = np.array([h_max, s_max, v_max])
     # print(min_HSV, high_HSV)
 
     # Threshold по диапазону HSV
-    kernel = np.ones((3, 3), np.uint8)
     new_mask = cv.inRange(img_hsv, low_HSV, high_HSV)
+    # kernel = np.ones((3, 3), np.uint8)
     # new_mask = cv.dilate(new_mask, kernel, iterations=2)
     # img_res = cv.bitwise_and(img, img, mask=new_mask)
     img_res = np.zeros((img.shape[0], img.shape[1], 3), dtype=np.uint8)
@@ -142,35 +126,33 @@ def process(source_file, out_path, model):
     img_res[:, :, 0] = np.where(new_mask == 0, img[:, :, 0], ones[:, :, 1] * 0)
     img_res[:, :, 1] = np.where(new_mask == 0, img[:, :, 1], ones[:, :, 1] * 255)
     img_res[:, :, 2] = np.where(new_mask == 0, img[:, :, 2], ones[:, :, 1] * 0)
-
+    results.append(cv.cvtColor(new_mask, cv.COLOR_GRAY2RGB))
+    titles.append('filtered mask')
     results.append(img_res)
-    titles.append('pred -> hsv')
+    titles.append('masked image-2')
     if SAVE_ALL:
-        out_file = os.path.join(out_path, 'pred_hsv_img_' + os.path.basename(source_file))
-        cv.imwrite(out_file, img_res)
-        print('Сохранили изображение швы по маске: {}'.format(img_res.shape))
-
+        out_file = os.path.join(out_path, 'mask_hsv_' + os.path.basename(source_file))
+        cv.imwrite(out_file, new_mask)
+        print('Сохранили маску по фильтру hsv: {}'.format(new_mask.shape))
+        # out_file2 = os.path.join(out_path, 'img_hsv_' + os.path.basename(source_file))
+        # cv.imwrite(out_file2, img_res)
 
     # Добавим "заглушки" чтобы пропустить две ячейки
-    img_black = np.zeros((img_height, img_width, 3), dtype=np.uint8)
-    for _ in range(1):
-        results.append(img_black)
-        titles.append('')
+    # img_black = np.zeros((img_height, img_width, 3), dtype=np.uint8)
+    # for _ in range(1):
+    #     results.append(img_black)
+    #     titles.append('')
 
     # Преобразование CANNY над ОРИГИНАЛОМ
     gray = cv.cvtColor(img_rgb, cv.COLOR_RGB2GRAY)
     edges = cv.Canny(gray, 30, 200)
     results.append(cv.cvtColor(edges, cv.COLOR_GRAY2RGB))  # результат запишем в размерности (w, h, 3)
     titles.append('canny edges')
-    if SAVE_ALL:
-        out_file = os.path.join(out_path, 'canny_edges_' + os.path.basename(source_file))
-        cv.imwrite(out_file, edges)
-        print('Сохранили изображение Canny edges: {}'.format(edges))
 
     # Преобразование CANNY -> CONTOURS
     gray = cv.cvtColor(img_rgb, cv.COLOR_RGB2GRAY)
     #
-    CANNY_THRESH_1 = 10
+    CANNY_THRESH_1 = 30
     CANNY_THRESH_2 = 200
     #
     edges = cv.Canny(gray, CANNY_THRESH_1, CANNY_THRESH_2)
@@ -193,10 +175,6 @@ def process(source_file, out_path, model):
             cv.rectangle(edges, (x, y), (x + w, y + h), tpl, -1)
     results.append(cv.cvtColor(edges, cv.COLOR_GRAY2RGB))  # результат запишем в размерности (w, h, 3)
     titles.append('canny -> contours')
-    if SAVE_ALL:
-        out_file = os.path.join(out_path, 'canny_contours_' + os.path.basename(source_file))
-        cv.imwrite(out_file, edges)
-        print('Сохранили изображение Canny contours: {}'.format(edges))
 
     # Добавим "заглушки" чтобы пропустить ячейки
     img_black = np.zeros((img_height, img_width, 3), dtype=np.uint8)

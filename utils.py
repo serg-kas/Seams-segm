@@ -394,15 +394,16 @@ def opencv_contours(img):
         if area > 100:
             (x, y, w, h) = cv.boundingRect(c)
 
+            # Нарисовать контуры
             # cv.drawContours(img, [c], -1, (0, 255, 0), 2)
 
-            # Get random color for each brick
+            # Закрасить каждый кирпич случайным цветом
             tpl = tuple([random.randint(0, 255) for _ in range(3)])
             cv.rectangle(img, (x, y), (x + w, y + h), tpl, -1)
     return img
 
 
-# ПОКА НЕ РЕДАКТИРОВАЛАСЬ
+# НЕ АДАПТИРОВАЛАСЬ
 # Функция получения контура маски и заливки его результатом преобразования canny
 def cut_and_canny_contour_cv(image, mask, cnt_thickness=4, kernel=(5, 5)):
     """
