@@ -46,7 +46,7 @@ def process(source_file, out_path, model):
 
     # Загружаем ИСХОДНОЕ ИЗОБРАЖЕНИЕ
     img_bgr = cv.imread(source_file)
-    img_bgr = u.img_resize_cv(img_bgr, 2048)  # ЗАКОМЕНТИРОВАТЬ
+    # img_bgr = u.img_resize_cv(img_bgr, 2048)  # ЗАКОМЕНТИРОВАТЬ
     img_rgb = cv.cvtColor(img_bgr, cv.COLOR_BGR2RGB)
     results.append(img_rgb)
     titles.append('original image')
@@ -167,9 +167,7 @@ def process(source_file, out_path, model):
         # Only if the area is not miniscule (arbitrary)
         if area > 100:
             (x, y, w, h) = cv.boundingRect(c)
-
             # cv.drawContours(img, [c], -1, (0, 255, 0), 2)
-
             # Get random color
             tpl = tuple([random.randint(0, 255) for _ in range(3)])
             cv.rectangle(edges, (x, y), (x + w, y + h), tpl, -1)
