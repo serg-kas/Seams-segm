@@ -62,7 +62,9 @@ def process(source_file, out_path, model):
     results.append(cv.cvtColor(pred, cv.COLOR_GRAY2RGB))  # результат запишем в размерности (w, h, 3)
     titles.append('predicted mask')
     if SAVE_ALL:
-        out_file = os.path.join(out_path, 'mask_pred_' + os.path.basename(source_file))
+        base_name = os.path.basename(source_file)
+        filename, _ = os.path.splitext(base_name)
+        out_file = os.path.join(out_path, 'mask_pred_' + filename + '.png')
         cv.imwrite(out_file, pred)
         print('Сохранили маску по предикту: {}'.format(pred.shape))
 
@@ -118,9 +120,10 @@ def process(source_file, out_path, model):
 
     # Threshold по диапазону HSV
     new_mask = cv.inRange(img_hsv, low_HSV, high_HSV)
+    #
     # kernel = np.ones((3, 3), np.uint8)
     # new_mask = cv.dilate(new_mask, kernel, iterations=2)
-    # img_res = cv.bitwise_and(img, img, mask=new_mask)
+    #
     img_res = np.zeros((img.shape[0], img.shape[1], 3), dtype=np.uint8)
     ones = np.ones((img.shape[0], img.shape[1], 3), dtype=np.uint8)
     img_res[:, :, 0] = np.where(new_mask == 0, img[:, :, 0], ones[:, :, 1] * 0)
@@ -131,17 +134,11 @@ def process(source_file, out_path, model):
     results.append(img_res)
     titles.append('masked image-2')
     if SAVE_ALL:
-        out_file = os.path.join(out_path, 'mask_hsv_' + os.path.basename(source_file))
+        base_name = os.path.basename(source_file)
+        filename, _ = os.path.splitext(base_name)
+        out_file = os.path.join(out_path, 'mask_hsv_' + filename + '.png')
         cv.imwrite(out_file, new_mask)
-        print('Сохранили маску по фильтру hsv: {}'.format(new_mask.shape))
-        # out_file2 = os.path.join(out_path, 'img_hsv_' + os.path.basename(source_file))
-        # cv.imwrite(out_file2, img_res)
-
-    # Добавим "заглушки" чтобы пропустить две ячейки
-    # img_black = np.zeros((img_height, img_width, 3), dtype=np.uint8)
-    # for _ in range(1):
-    #     results.append(img_black)
-    #     titles.append('')
+        print('Сохранили маску по фильтру: {}'.format(new_mask.shape))
 
     # Преобразование CANNY над ОРИГИНАЛОМ
     gray = cv.cvtColor(img_rgb, cv.COLOR_RGB2GRAY)

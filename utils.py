@@ -403,7 +403,7 @@ def opencv_contours(img):
     return img
 
 
-# НЕ АДАПТИРОВАЛАСЬ
+# НЕ АДАПТИРОВАЛАСЬ для этого проекта
 # Функция получения контура маски и заливки его результатом преобразования canny
 def cut_and_canny_contour_cv(image, mask, cnt_thickness=4, kernel=(5, 5)):
     """
